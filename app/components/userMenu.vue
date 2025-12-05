@@ -5,29 +5,39 @@ const items = ref<DropdownMenuItem[][]>([
     [
         {
             label: 'หน้าหลัก',
-            icon: 'i-lucide-user',
+            icon: 'i-lucide-house',
             to: '/'
         },
         {
             label: 'สร้างแชนแนลใหม่',
-            icon: 'i-lucide-credit-card',
+            icon: 'i-lucide-book-plus',
             to: '/channel'
         }
     ],
     [
         {
             label: 'ออกจากระบบ',
-            icon: 'i-lucide-cog',
+            icon: 'i-lucide-log-out',
+            class: 'cursor-pointer',
+            color: 'error',
             action: () => {
                 // Logic ออกจากระบบ
             }
         }
     ]
 ])
+
 </script>
 
 <template>
     <div class="flex items-center gap-4">
+        <!-- 
+        <ClientOnly>
+            <UContentSearchButton :collapsed="false" :kbds="['alt', 'O']" />
+
+            <LazyUContentSearch v-model:search-term="searchTerm" shortcut="alt_o" :files="files"
+                :navigation="navigation" :fuse="{ resultLimit: 42 }" />
+        </ClientOnly> -->
 
         <UPopover arrow :popper="{ placement: 'bottom-end' }">
             <UChip text="5" color="error" size="3xl" inset>
@@ -48,7 +58,7 @@ const items = ref<DropdownMenuItem[][]>([
                     </div>
 
                     <div class="flex flex-col">
-                        <UEmpty v-if="false" icon="i-lucide-bell-off" title="No notifications"
+                        <UEmpty v-if="true" icon="i-lucide-bell-off" title="No notifications"
                             description="You're all caught up!" class="py-8" />
 
                         <div v-else class="max-h-[320px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">

@@ -10,4 +10,8 @@
         </div>
     </nav>
     <USeparator size="md" />
+
+    <main>
+        <ChannelList />
+    </main>
 </template>
