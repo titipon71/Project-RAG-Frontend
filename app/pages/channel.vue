@@ -91,9 +91,10 @@ onMounted(() => {
                     title: ch.title,
                     description: ch.description,
                     status: ch.status,
+                    created_by_name: ch.created_by_name,
                     created_at: ch.created_at,
                     file_count: ch.file_count
-                }" />
+                }" @deleted="loadChannels" />
             </div>
         </div>
     </main>

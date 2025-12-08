@@ -54,9 +54,20 @@ export const useChannel = () => {
   };
 
   const deleteChannel = async (id: number) => {
-    return await $fetch(`${apiBase}/channels/${id}`, {
-      method: "DELETE",
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          // จริง ๆ ไม่ใส่ก็ได้ $fetch จะใส่ให้เองถ้า body เป็น object
+          "Content-Type": "application/json",
+          credentials: "include",
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   return {

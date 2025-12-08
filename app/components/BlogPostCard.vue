@@ -2,19 +2,34 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { ref, computed } from 'vue'
 
-// ===== Props =====
+const { deleteChannel, loading } = useChannel()
+
+const emit = defineEmits<{
+    (e: 'deleted'): void
+}>()
+
 const props = defineProps<{
     item: {
-        channels_id: number | string
+        channels_id: number
         title: string
         description?: string | null
         status?: string | null
+        created_by_name: string
         created_at?: string | null
         file_count?: number | null
     }
 }>()
 
-// ===== เมนู 3 จุด (ยังไม่ผูก event อะไรเพิ่ม ตามที่บอกว่าไม่ต้องยุ่ง UI เยอะ) =====
+const handleDelete = async () => {
+    if (!confirm(`ยืนยันลบแชนแนล "${props.item.title}" ?`)) return
+    const id = props.item.channels_id
+    await deleteChannel(id)
+    emit('deleted')
+}
+
+const cardCreated_by = computed(() => `${props.item.created_by_name}`)
+const cardCreated_at = computed(() => `${props.item.created_at}`)
+
 const items: DropdownMenuItem[][] = [
     [
         {
@@ -33,16 +48,18 @@ const items: DropdownMenuItem[][] = [
             label: 'Delete',
             color: 'error',
             icon: 'i-lucide-trash',
-            class: 'cursor-pointer'
+            class: 'cursor-pointer',
+            onSelect: () => {
+                handleDelete()
+            }
         }
     ]
 ]
 
-// ===== ข้อมูล user ตอนนี้ยังเป็น mock ไว้ก่อน =====
 const testimonial = ref({
     user: {
-        name: 'Unknown',
-        description: 'Channel owner',
+        name: cardCreated_by || 'Unknown',
+        description: cardCreated_at,
         avatar: {
             src: 'https://avatars.githubusercontent.com/u/0?v=4',
             alt: 'User avatar'
@@ -51,7 +68,6 @@ const testimonial = ref({
     quote: '“Channel ready to use.”'
 })
 
-// ===== ค่าที่คำนวณจาก props =====
 const cardLink = computed(() => `/channels/${props.item.channels_id}`)
 const cardTitle = computed(() => props.item.title || 'Untitled Channel')
 const cardDescription = computed(
