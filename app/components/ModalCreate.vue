@@ -1,5 +1,7 @@
 <script setup lang="ts">
+
 const { createChannel, loading } = useChannel()
+const toast = useToast()
 
 const form = reactive<{ title: string; description: string | null }>({
     title: '',
@@ -20,17 +22,18 @@ async function validate(data: Partial<typeof form>) {
 }
 
 const onSubmit = async () => {
-    // 1. สร้าง channel แล้วรับ id กลับมา
     const id = await createChannel({
         title: form.title,
         description: form.description,
     })
-
-    // 2. ถ้าอยากหน่วง 1 วิ (จะมีหรือไม่ก็ได้)
     await new Promise<void>(res => setTimeout(res, 1000))
-
-    // 3. เด้งไปหน้าช่องที่สร้าง
     navigateTo(`/channels/${id}`)
+    toast.add({
+        title: 'Successful!',
+        description: `สร้างแชนแนล, ${form.title}`,
+        icon: 'i-lucide-check-circle',
+        color: 'success'
+    })
 }
 
 // ฟังก์ชันให้ input เรียกเวลา Enter

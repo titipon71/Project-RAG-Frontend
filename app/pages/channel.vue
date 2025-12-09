@@ -31,9 +31,9 @@ onMounted(() => {
     <nav class="flex items-center justify-between py-4">
         <NuxtLink to="/" class="text-xl">จัดการห้องแชนแนล</NuxtLink>
         <div class="flex items-center gap-3">
-            <ModalMenu>
+            <ModalCreate>
                 <UButton class="cursor-pointer" size="lg" label="สร้างแชนแนลใหม่" color="secondary" variant="solid" />
-            </ModalMenu>
+            </ModalCreate>
 
             <UserMenu />
         </div>
@@ -60,17 +60,17 @@ onMounted(() => {
                 เหมือนคุณจะยังไม่เคยสร้างแชนแนล โปรดสร้างแชนแนลแรกของคุณก่อน
             </p>
 
-            <ModalMenu>
+            <ModalCreate>
                 <UButton class="cursor-pointer" label="สร้างแชนแนลใหม่" color="secondary" variant="solid" />
-            </ModalMenu>
+            </ModalCreate>
         </div>
 
         <!-- 3) ถ้ามี channel ให้แสดง -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
             <!-- การ์ดสร้างแชนแนลใหม่ -->
-            <ModalMenu>
-                <button type="button" class="w-full h-full min-h-[200px] bg-white border border-gray-200
-               dark:bg-gray-800 dark:border-gray-800 rounded-2xl flex flex-col
+            <ModalCreate>
+                <button type="button" class="w-full h-full min-h-[190px] bg-white border border-gray-200
+               dark:bg-gray-800 dark:border-gray-800 rounded-lg flex flex-col
                items-center justify-center cursor-pointer hover:shadow-md
                hover:border-blue-300 transition-all group">
                     <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-3
@@ -82,7 +82,7 @@ onMounted(() => {
                         สร้างแชนแนลใหม่
                     </span>
                 </button>
-            </ModalMenu>
+            </ModalCreate>
 
             <!-- Loop แชนแนล -->
             <div v-for="ch in channels" :key="ch.channels_id" class="w-full">

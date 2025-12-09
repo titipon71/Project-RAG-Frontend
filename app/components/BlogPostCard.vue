@@ -2,8 +2,6 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { ref, computed } from 'vue'
 
-const { deleteChannel, loading } = useChannel()
-
 const emit = defineEmits<{
     (e: 'deleted'): void
 }>()
@@ -20,15 +18,28 @@ const props = defineProps<{
     }
 }>()
 
-const handleDelete = async () => {
-    if (!confirm(`ยืนยันลบแชนแนล "${props.item.title}" ?`)) return
-    const id = props.item.channels_id
-    await deleteChannel(id)
-    emit('deleted')
+// ====== state ไว้เปิด/ปิด ModalDelete ======
+const deleteOpen = ref(false)
+const openDelete = () => {
+    deleteOpen.value = true
 }
 
+// ====== ข้อมูลโชว์บนการ์ด ======
 const cardCreated_by = computed(() => `${props.item.created_by_name}`)
-const cardCreated_at = computed(() => `${props.item.created_at}`)
+const cardCreated_at = computed(() => {
+    if (!props.item.created_at) return 'ไม่ทราบวันที่'
+
+    const date = new Date(props.item.created_at)
+
+    return date.toLocaleString('th-TH', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+})
 
 const items: DropdownMenuItem[][] = [
     [
@@ -50,7 +61,7 @@ const items: DropdownMenuItem[][] = [
             icon: 'i-lucide-trash',
             class: 'cursor-pointer',
             onSelect: () => {
-                handleDelete()
+                openDelete() // ✅ แค่เปิด modal
             }
         }
     ]
@@ -106,6 +117,7 @@ const fileCountLabel = computed(() => {
             </template>
         </UPageCard>
 
+        <!-- ปุ่ม 3 จุด -->
         <div class="absolute top-2 right-2 z-10">
             <UDropdownMenu :items="items" :content="{
                 align: 'end',
@@ -116,5 +128,9 @@ const fileCountLabel = computed(() => {
                     class="p-1 cursor-pointer" />
             </UDropdownMenu>
         </div>
+
+        <!-- ✅ ModalDelete (แยกไฟล์) -->
+        <ModalDelete v-model:open="deleteOpen" :item="{ channels_id: props.item.channels_id, title: props.item.title }"
+            @deleted="emit('deleted')" />
     </div>
 </template>
