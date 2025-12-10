@@ -30,7 +30,6 @@ export const useChannel = () => {
         method: "POST",
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
-          // จริง ๆ ไม่ใส่ก็ได้ $fetch จะใส่ให้เองถ้า body เป็น object
           "Content-Type": "application/json",
         },
         body: {
@@ -77,7 +76,6 @@ export const useChannel = () => {
         method: "DELETE",
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
-          // จริง ๆ ไม่ใส่ก็ได้ $fetch จะใส่ให้เองถ้า body เป็น object
           "Content-Type": "application/json",
           credentials: "include",
         },
@@ -87,11 +85,45 @@ export const useChannel = () => {
     }
   };
 
+  const statusChannel = async (
+    id: number,
+    payload: {
+      approve: boolean;
+      reason: string | null;
+    }
+  ) => {
+    // 1. เลือก Action ตามสถานะ: ถ้า approve=true ไป public, ถ้า false ไป private
+    const action = payload.approve
+      ? "admin-forced-public"
+      : "admin-forced-private";
+
+    console.log(`Updating status for Channel ID: ${id} to ${action}`);
+
+    return await $fetch(`${apiBase}/channels/${id}/${action}`, {
+      // 2. ใส่ตัวแปร action ลงใน URL
+      method: "POST",
+      headers: {
+        // แนะนำให้เรียก authStore.token ตรงนี้เพื่อให้ได้ Token ล่าสุดเสมอ
+        Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
+        "Content-Type": "application/json",
+      },
+      body: {
+        // ⚠️ จุดสังเกต: API แนว "Forced" มักจะต้องการ approve: true เพื่อยืนยันคำสั่งเสมอ
+        // ไม่ว่าจะเป็นการ Force Public หรือ Force Private
+        // ผมจึงตั้งเป็น true ไว้ (เพราะเราเลือก endpoint ที่ถูกต้องแล้ว)
+        approve: payload.approve,
+
+        reason: payload.reason ?? "",
+      },
+    });
+  };
+
   return {
     fetchChannels,
     createChannel,
     updateChannel,
     deleteChannel,
+    statusChannel,
     loading,
   };
 };

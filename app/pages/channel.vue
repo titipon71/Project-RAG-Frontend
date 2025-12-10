@@ -69,7 +69,7 @@ onMounted(() => {
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
             <!-- การ์ดสร้างแชนแนลใหม่ -->
             <ModalCreate>
-                <button type="button" class="w-full h-full min-h-[190px] bg-white border border-gray-200
+                <button type="button" class="w-full h-full min-h-[188.5px] bg-white border border-gray-200
                dark:bg-gray-800 dark:border-gray-800 rounded-lg flex flex-col
                items-center justify-center cursor-pointer hover:shadow-md
                hover:border-blue-300 transition-all group">
