@@ -94,7 +94,7 @@ onMounted(() => {
                     created_by_name: ch.created_by_name,
                     created_at: ch.created_at,
                     file_count: ch.file_count
-                }" @deleted="loadChannels" />
+                }" @load="loadChannels" />
             </div>
         </div>
     </main>

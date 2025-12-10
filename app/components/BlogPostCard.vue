@@ -3,7 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { ref, computed } from 'vue'
 
 const emit = defineEmits<{
-    (e: 'deleted'): void
+    (e: 'load'): void
 }>()
 
 const props = defineProps<{
@@ -19,9 +19,13 @@ const props = defineProps<{
 }>()
 
 // ====== state ไว้เปิด/ปิด ModalDelete ======
-const deleteOpen = ref(false)
+const OpenModal = ref(false)
+const OpenEdit = ref(false)
 const openDelete = () => {
-    deleteOpen.value = true
+    OpenModal.value = true
+}
+const openEdit = () => {
+    OpenEdit.value = true
 }
 
 // ====== ข้อมูลโชว์บนการ์ด ======
@@ -51,7 +55,10 @@ const items: DropdownMenuItem[][] = [
         {
             label: 'Edit',
             icon: 'i-lucide-pencil',
-            class: 'cursor-pointer'
+            class: 'cursor-pointer',
+            onSelect: () => {
+                openEdit()
+            }
         }
     ],
     [
@@ -61,7 +68,7 @@ const items: DropdownMenuItem[][] = [
             icon: 'i-lucide-trash',
             class: 'cursor-pointer',
             onSelect: () => {
-                openDelete() // ✅ แค่เปิด modal
+                openDelete()
             }
         }
     ]
@@ -129,8 +136,15 @@ const fileCountLabel = computed(() => {
             </UDropdownMenu>
         </div>
 
-        <!-- ✅ ModalDelete (แยกไฟล์) -->
-        <ModalDelete v-model:open="deleteOpen" :item="{ channels_id: props.item.channels_id, title: props.item.title }"
-            @deleted="emit('deleted')" />
+        <ModalDelete v-model:open="OpenModal" :item="{ channels_id: props.item.channels_id, title: props.item.title }"
+            @deleted="emit('load')" />
+
+        <ModalEdit v-model:open="OpenEdit" :item="{
+            channels_id: props.item.channels_id,
+            title: props.item.title,
+            description: props.item.description
+        }" @edit="emit('load')" />
+
+
     </div>
 </template>

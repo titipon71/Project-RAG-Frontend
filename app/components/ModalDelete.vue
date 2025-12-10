@@ -58,16 +58,21 @@ const handleDelete = async () => {
                 ใช่หรือไม่?
             </p>
 
-            <div class="pt-2">
+            <div class="pt-3 flex gap-2">
+                <UButton size="lg" color="error" @click="handleDelete" :disabled="loading"
+                    class="cursor-pointer mr-2 flex items-center justify-center gap-2">
+                    <!-- icon หมุนตอนกำลังบันทึก -->
+                    <UIcon v-if="loading" name="i-heroicons-arrow-path" class="animate-spin" />
 
-                <UButton size="lg" color="error" :loading="loading" @click="handleDelete" class="cursor-pointer mr-2">
-                    ลบแชนแนล
+                    <!-- ข้อความ -->
+                    <span>
+                        {{ loading ? 'ลบแชนแนล...' : 'ลบแชนแนล' }}
+                    </span>
                 </UButton>
 
                 <UButton size="lg" class="cursor-pointer" @click="close">
                     ยกเลิก
                 </UButton>
-
             </div>
         </template>
     </UModal>

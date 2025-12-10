@@ -46,11 +46,28 @@ export const useChannel = () => {
     }
   };
 
-  const updateChannel = async (id: number, payload: any) => {
-    return await $fetch(`${apiBase}/channels/${id}`, {
-      method: "PUT",
-      body: payload,
-    });
+  const updateChannel = async (
+    id: number,
+    payload: { title: string; description?: string | null }
+  ) => {
+    loading.value = true;
+    try {
+      // const token = useCookie<string | null>("access_token").value;
+
+      return await $fetch(`${apiBase}/channels/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: {
+          title: payload.title,
+          description: payload.description ?? "",
+        },
+        credentials: "include",
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   const deleteChannel = async (id: number) => {
