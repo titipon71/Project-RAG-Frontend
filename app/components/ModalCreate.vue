@@ -83,7 +83,8 @@ const onSubmit = async () => {
         </template>
 
         <template #body>
-            <UForm ref="channelForm" :state="form" :validate="validate" @submit.prevent="onSubmit" class="space-y-6">
+            <UForm ref="channelForm" :state="form" :validate="validate" :validate-on="[]" @submit.prevent="onSubmit"
+                class="space-y-6">
                 <UFormField name="title" label="ชื่อแชนแนล" size="xl">
                     <UInput v-model="form.title" :autofocus="false" size="xl" placeholder="ชื่อแชนแนลของคุณ..."
                         class="w-full" />

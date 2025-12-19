@@ -194,22 +194,37 @@ const dropdownItems = computed<DropdownMenuItem[][]>(() => {
        Admin → ทำได้หมด
     ========================= */
     if (isAdmin.value) {
+        const adminActions: DropdownMenuItem[] = [...detailMenu]
+
+        // เพิ่มปุ่ม Edit
+        adminActions.push({
+            label: 'Edit',
+            icon: 'i-lucide-pencil',
+            class: 'cursor-pointer',
+            onSelect: () => openModal('edit')
+        })
+
+        const statusSection: DropdownMenuItem[] = [
+            {
+                slot: 'status-switch',
+                onSelect: (e: Event) => e.preventDefault()
+            }
+        ]
+
+        // --- เพิ่มเงื่อนไขปุ่ม REJECT สำหรับ Admin เท่านั้น ---
+        if (props.item.status === 'pending') {
+            statusSection.push({
+                label: 'Reject Request',
+                icon: 'i-lucide-ban',
+                color: 'error',
+                class: 'cursor-pointer text-red-600',
+                onSelect: () => openModal('rejected') // เปิด Modal ที่คุณเตรียมไว้
+            })
+        }
+
         return [
-            [
-                ...detailMenu,
-                {
-                    label: 'Edit',
-                    icon: 'i-lucide-pencil',
-                    class: 'cursor-pointer',
-                    onSelect: () => openModal('edit')
-                }
-            ],
-            [
-                {
-                    slot: 'status-switch',
-                    onSelect: (e: Event) => e.preventDefault()
-                }
-            ],
+            adminActions,
+            statusSection,
             [
                 {
                     label: 'Delete',
