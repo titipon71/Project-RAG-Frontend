@@ -74,13 +74,6 @@ export const useChannel = () => {
     });
   };
 
-  const fetchChannelTitle = (id: string | number) => {
-    // ระบุ return type เป็น object ตามรูปที่ส่งมา
-    return request<{ channel_title: string }>(`/channels/${id}/title`, {
-      method: "GET",
-    });
-  };
-
   const createChannel = async (payload: {
     title: string;
     description: string | null;
@@ -166,7 +159,6 @@ export const useChannel = () => {
     fetchMyChannels,
     fetchPublicChannels,
     fetchAllChannels,
-    fetchChannelTitle,
     // CRUD
     createChannel,
     updateChannel,
