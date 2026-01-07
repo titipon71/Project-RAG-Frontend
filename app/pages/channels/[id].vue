@@ -8,7 +8,7 @@ const toast = useToast()
 const authStore = useAuthStore()
 const channelId = computed(() => route.params.id as string)
 
-const { loading, error, uploadFiles, clearError } = useFileChannel()
+const { loading, error, uploadFiles, downLoadFile, clearError } = useFileChannel()
 const { fetchPublicChannels, fetchMyChannels, fetchAllChannels } = useChannel()
 const {
     createSession,
@@ -62,13 +62,13 @@ const loadChannelData = async () => {
         const findMatch = (list: any[]) =>
             list.find((c: any) => String(c.channels_id) === String(channelId.value))
 
-        let currentChannel = response ? findMatch(response) : null
+        let currentChannel = response ? findMatch(response as any[]) : null
 
         // 2. ถ้ายังไม่เจอ (เช่น เป็นคนนอก) ให้ดึงจาก Public List
         if (!currentChannel) {
             console.log('🌍 กำลังดึงข้อมูลจากรายการสาธารณะ')
             const publicRes = await fetchPublicChannels({ limit: 100 })
-            currentChannel = findMatch(publicRes)
+            currentChannel = findMatch(publicRes as any[])
         }
 
         // 3. อัปเดตข้อมูลลง State
@@ -166,6 +166,19 @@ const handleFileDeleted = (fileId: string) => {
     state.sources = state.sources.filter(f => f.files_id !== fileId)
 }
 
+const handleDownload = async (file: any) => {
+    try {
+        // ใช้ files_id หรือ hash ตามที่ API ของคุณกำหนด (ในรูปเขียนว่า file_hash)
+        await downLoadFile(file.files_id, file.original_filename);
+    } catch (err) {
+        toast.add({
+            title: 'ดาวน์โหลดไม่สำเร็จ',
+            description: 'เกิดข้อผิดพลาดในการโหลดไฟล์',
+            color: 'error'
+        });
+    }
+};
+
 /* ============================================
    Chat Logic
 ============================================ */
@@ -178,13 +191,13 @@ const initChatSession = async () => {
         state.sessionId = session.sessions_id
 
         // 2. โหลดประวัติเก่า (ถ้ามี)
-        const history = await getChatHistory(state.sessionId)
-        state.chatHistory = history.map(h => ({
-            id: h.chat_id,
-            role: h.sender_type, // 'user' หรือ 'bot' (เช็คค่าจาก API อีกครั้ง)
-            text: h.message,
-            citations: []
-        }))
+        // const history = await getChatHistory(state.sessionId)
+        // state.chatHistory = history.map(h => ({
+        //     id: h.chat_id,
+        //     role: h.sender_type, // 'user' หรือ 'bot' (เช็คค่าจาก API อีกครั้ง)
+        //     text: h.message,
+        //     citations: []
+        // }))
     } catch (err) {
         console.error("Init session failed", err)
     }
@@ -398,7 +411,7 @@ watch(() => route.params.id, (newId) => {
 
                 <!-- File Items with Animation -->
                 <div v-for="(file, index) in state.sources" :key="file.files_id"
-                    class="flex items-center justify-between p-3 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-950/30 cursor-pointer group transition-all duration-300 hover:shadow-md hover:scale-[1.02] border border-transparent hover:border-primary-200 dark:hover:border-primary-900"
+                    class="flex items-center justify-between p-3 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-950/30 group transition-all duration-300 hover:shadow-md hover:scale-[1.02] border border-transparent hover:border-primary-200 dark:hover:border-primary-900"
                     :style="{ animationDelay: `${index * 50}ms` }">
                     <div class="flex items-center gap-3 truncate flex-1 min-w-0">
                         <div
@@ -416,6 +429,10 @@ watch(() => route.params.id, (newId) => {
                             </span>
                         </div>
                     </div>
+
+                    <UButton icon="i-heroicons-arrow-down-tray" color="primary" variant="ghost" size="sm"
+                        @click.stop="handleDownload(file)"
+                        class="opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110" />
 
                     <!-- ปุ่มลบที่เปิด Modal -->
                     <UButton icon="i-heroicons-trash" color="error" variant="ghost" size="sm"
@@ -572,7 +589,7 @@ watch(() => route.params.id, (newId) => {
         </main>
 
         <!-- Delete Modal Component -->
-        <ChannelDeleteModal v-model:open="deleteModalState.isOpen" :file="deleteModalState.selectedFile"
+        <ModalDeleteFile v-model:open="deleteModalState.isOpen" :file="deleteModalState.selectedFile"
             @deleted="handleFileDeleted" />
     </div>
 </template>

@@ -11,7 +11,7 @@ const {
     ownerSetPrivateChannel,
     adminforceSetPrivateChannel,
     adminforceSetPublicChannel,
-    loading
+    loading // ใช้ loading ตัวรวมที่ประกาศไว้ใน useChannel ตัวใหม่
 } = useChannel()
 
 const authStore = useAuthStore()
@@ -95,41 +95,31 @@ const statusBadge = computed(() => {
 /* =============================== */
 /* Status Actions                  */
 /* =============================== */
-const handleAction = async (
-    action: () => Promise<void>,
-    successMsg: string,
-    errorMsg: string
-) => {
-    if (loading.value) return
-
+const handleAction = async (action: () => Promise<void>, successMsg: string, errorMsg: string) => {
+    if (loading.value) return // ป้องกันการกดย้ำขณะโหลด
     try {
         await action()
         toast.add({ title: successMsg, color: 'success' })
         emit('load')
     } catch (error) {
-        toast.add({
-            title: 'เกิดข้อผิดพลาด',
-            description: errorMsg,
-            color: 'error'
-        })
-        console.error(error)
+        toast.add({ title: 'เกิดข้อผิดพลาด', description: errorMsg, color: 'error' })
     }
 }
 
 const handleRequestPublic = () => handleAction(
-    () => requestPublicChannel(props.item.channels_id),
+    async () => { await requestPublicChannel(props.item.channels_id) },
     'ส่งคำขอเรียบร้อยแล้ว',
     'ไม่สามารถส่งคำขอได้'
 )
 
 const handleCancelRequest = () => handleAction(
-    () => cancelRequestPublicChannel(props.item.channels_id),
+    async () => { await cancelRequestPublicChannel(props.item.channels_id) },
     'ยกเลิกคำขอเรียบร้อยแล้ว',
     'ไม่สามารถยกเลิกคำขอได้'
 )
 
 const handleSetPrivate = () => handleAction(
-    () => ownerSetPrivateChannel(props.item.channels_id),
+    async () => { await ownerSetPrivateChannel(props.item.channels_id) },
     'ตั้งค่าเป็นส่วนตัวเรียบร้อยแล้ว',
     'ดำเนินการไม่สำเร็จ'
 )

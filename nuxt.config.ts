@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
     public: {
-      apiBase: "https://fastapi888.lukeenortaed.site",
+      apiBase: "",
     },
   },
 });

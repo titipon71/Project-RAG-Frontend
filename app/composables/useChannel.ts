@@ -4,22 +4,10 @@ export const useChannel = () => {
   const authStore = useAuthStore();
   const loading = ref(false);
 
-  // --- Helper Function สำหรับยิง API กลาง ---
-  const request = async <T = any>(endpoint: string, options: any = {}) => {
-    loading.value = true;
-    try {
-      return await $fetch<T>(endpoint, {
-        baseURL: apiBase,
-        ...options,
-        headers: {
-          Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
-          ...options.headers,
-        },
-      });
-    } finally {
-      loading.value = false;
-    }
-  };
+  // ฟังก์ชันสำหรับดึง Header (เพื่อลดความซ้ำซ้อนในการเขียน Authorization)
+  const getHeaders = () => ({
+    Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
+  });
 
   // --- CRUD Operations ---
 
@@ -27,143 +15,232 @@ export const useChannel = () => {
    * ดึงแชนแนลของตัวเอง (My Channels)
    * GET /channels/list/
    */
-  const fetchMyChannels = (
+  const fetchMyChannels = async (
     params: { search?: string; skip?: number; limit?: number } = {}
   ) => {
-    return request("/channels/list/", {
-      method: "GET",
-      query: {
-        search_by_name: params.search || undefined,
-        skip: params.skip ?? 0,
-        limit: params.limit ?? 20,
-      },
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/list/`, {
+        method: "GET",
+        headers: getHeaders(),
+        query: {
+          search_by_name: params.search || undefined,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   /**
    * ดึงแชนแนลสาธารณะ (Public Channels)
    * GET /channels/public/list/
    */
-  const fetchPublicChannels = (
+  const fetchPublicChannels = async (
     params: { search?: string; skip?: number; limit?: number } = {}
   ) => {
-    return request("/channels/public/list/", {
-      method: "GET",
-      query: {
-        search_by_name: params.search || undefined,
-        skip: params.skip ?? 0,
-        limit: params.limit ?? 20,
-      },
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/public/list/`, {
+        method: "GET",
+        headers: getHeaders(),
+        query: {
+          search_by_name: params.search || undefined,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   /**
    * ดึงแชนแนลทั้งหมด (All Channels - Admin Only)
    * GET /channels/list/all/
    */
-  const fetchAllChannels = (
+  const fetchAllChannels = async (
     params: { search?: string; skip?: number; limit?: number } = {}
   ) => {
-    return request("/channels/list/all/", {
-      method: "GET",
-      query: {
-        search_by_name: params.search || undefined,
-        skip: params.skip ?? 0,
-        limit: params.limit ?? 20,
-      },
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/list/all/`, {
+        method: "GET",
+        headers: getHeaders(),
+        query: {
+          search_by_name: params.search || undefined,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   const createChannel = async (payload: {
     title: string;
     description: string | null;
   }) => {
-    const res = await request("/channels", {
-      method: "POST",
-      body: {
-        title: payload.title,
-        description: payload.description ?? "",
-      },
-    });
-    return res.channels_id;
+    loading.value = true;
+    try {
+      const res: any = await $fetch(`${apiBase}/channels`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: {
+          title: payload.title,
+          description: payload.description ?? "",
+        },
+      });
+      return res.channels_id;
+    } catch (e) {
+      console.error("Create error:", e);
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const updateChannel = (
+  const updateChannel = async (
     id: number,
     payload: { title: string; description?: string | null }
   ) => {
-    return request(`/channels/${id}`, {
-      method: "PUT",
-      body: {
-        title: payload.title,
-        description: payload.description ?? "",
-      },
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: {
+          title: payload.title,
+          description: payload.description ?? "",
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const deleteChannel = (id: number) => {
-    return request(`/channels/${id}`, { method: "DELETE" });
+  const deleteChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}`, {
+        method: "DELETE",
+        headers: getHeaders(),
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   // --- Status & Moderation Operations ---
 
-  const statusChannel = (id: number, approve: boolean, reason: string = "") => {
-    return request(`/channels/${id}/moderate-public`, {
-      method: "POST",
-      body: { approve, reason },
-    });
+  const statusChannel = async (
+    id: number,
+    approve: boolean,
+    reason: string = ""
+  ) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/moderate-public`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: { approve, reason },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const fetchPendingChannels = (
+  const fetchPendingChannels = async (
     params: { search?: string; skip?: number; limit?: number } = {}
   ) => {
-    return request("/channels/pending/list/", {
-      method: "GET",
-      query: {
-        search_by_name: params.search || undefined,
-        skip: params.skip ?? 0,
-        limit: params.limit ?? 20,
-      },
-    });
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/pending/list/`, {
+        method: "GET",
+        headers: getHeaders(),
+        query: {
+          search_by_name: params.search || undefined,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const requestPublicChannel = (id: number) => {
-    return request(`/channels/${id}/request-public`, { method: "POST" });
+  const requestPublicChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/request-public`, {
+        method: "POST",
+        headers: getHeaders(),
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const cancelRequestPublicChannel = (id: number) => {
-    return request(`/channels/${id}/cancel-request`, { method: "POST" });
+  const cancelRequestPublicChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/cancel-request`, {
+        method: "POST",
+        headers: getHeaders(),
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const ownerSetPrivateChannel = (id: number) => {
-    return request(`/channels/${id}/owner-set-private`, { method: "POST" });
+  const ownerSetPrivateChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/owner-set-private`, {
+        method: "POST",
+        headers: getHeaders(),
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const adminforceSetPublicChannel = (id: number) => {
-    return request(`/channels/${id}/admin-forced-public`, {
-      method: "POST",
-      body: { approve: true },
-    });
+  const adminforceSetPublicChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/admin-forced-public`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: { approve: true },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
-  const adminforceSetPrivateChannel = (id: number) => {
-    return request(`/channels/${id}/admin-forced-private`, {
-      method: "POST",
-      body: { approve: true },
-    });
+  const adminforceSetPrivateChannel = async (id: number) => {
+    loading.value = true;
+    try {
+      return await $fetch(`${apiBase}/channels/${id}/admin-forced-private`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: { approve: true },
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   return {
     loading,
-    // ⭐ API Methods ใหม่
     fetchMyChannels,
     fetchPublicChannels,
     fetchAllChannels,
-    // CRUD
     createChannel,
     updateChannel,
     deleteChannel,
-    // Status
     statusChannel,
     fetchPendingChannels,
     requestPublicChannel,

@@ -98,6 +98,37 @@ export const useFileChannel = () => {
     });
   };
 
+  // เพิ่มใน useFileChannel ในไฟล์เดิม
+  const downLoadFile = async (fileHash: string, fileName: string) => {
+    try {
+      const response = await $fetch<Blob>(`/files/download/${fileHash}`, {
+        baseURL: apiBase,
+        method: "GET",
+        headers: {
+          Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
+        },
+        responseType: "blob", // สำคัญมาก: เพื่อให้ได้ข้อมูลเป็นไฟล์
+      });
+
+      // สร้าง Link เพื่อดาวน์โหลดไฟล์
+      const url = window.URL.createObjectURL(response);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName); // ตั้งชื่อไฟล์ที่จะบันทึก
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      const errorMessage = "ไม่สามารถดาวน์โหลดไฟล์ได้";
+      error.value = errorMessage;
+      console.error("Download Error:", err);
+      throw err;
+    }
+  };
+
   // --- Utility ---
 
   const clearError = () => {
@@ -112,5 +143,6 @@ export const useFileChannel = () => {
     uploadFiles,
     deleteFile,
     clearError,
+    downLoadFile,
   };
 };

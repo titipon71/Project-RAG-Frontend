@@ -49,7 +49,7 @@ const onSubmit = async () => {
             title: form.title.trim(),
             description: form.description,
         })
-        await new Promise<void>(res => setTimeout(res, 1000))
+        // await new Promise<void>(res => setTimeout(res, 1000))
         navigateTo(`/channels/${id}`)
         toast.add({
             title: 'Successful!',

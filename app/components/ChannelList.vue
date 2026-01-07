@@ -85,10 +85,10 @@ const loadChannels = async () => {
         // มาตรฐานการรับข้อมูล (Parsing)
         if (Array.isArray(response)) {
             channels.value = response
-        } else if (response?.channels) {
-            channels.value = response.channels
-        } else if (response?.data) {
-            channels.value = response.data
+        } else if ((response as any)?.channels) {
+            channels.value = (response as any).channels
+        } else if ((response as any)?.data) {
+            channels.value = (response as any).data
         } else {
             channels.value = []
         }
