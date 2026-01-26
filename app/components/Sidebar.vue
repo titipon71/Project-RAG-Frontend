@@ -1,41 +1,34 @@
 <script setup lang="ts">
 /* ============================================
-   COMPOSABLES & STORES
+   Imports & Composables
 ============================================ */
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
 
-const { fetchPublicChannels } = useChannel()
-const { uploadFiles, clearError } = useFileChannel() // เก็บแค่ uploadFiles กับ clearError
+const { loading, error, uploadFiles, downLoadFile, clearError } = useFileChannel()
+const { fetchPublicChannels, fetchMyChannels, fetchAllChannels } = useChannel()
 
-const loading = ref(false)
-const error = ref('')
 /* ============================================
-   COMPUTED PROPERTIES
+   Computed Properties
 ============================================ */
 const channelId = computed(() => route.params.id as string)
-
-// ✅ ใช้ fileCount จาก state โดยตรง หรือถ้ามี sources ให้นับจาก sources
-const displayFileCount = computed(() =>
-    state.sources.length > 0 ? state.sources.length : state.fileCount
-)
+const fileCount = computed(() => {
+    return state.sources.length > 0
+        ? state.sources.length
+        : (state.totalFilesFromList || 0)
+})
 
 /* ============================================
-   STATE MANAGEMENT
+   State Management
 ============================================ */
 const state = reactive({
-    // Modal states
     isModalOpen: false,
     isUploading: false,
-
-    // ✅ เพิ่ม channelTitle เพื่อเก็บชื่อช่อง
     channelTitle: '',
-
-    // ✅ เปลี่ยนชื่อตัวแปรให้ชัดเจน
-    fileCount: 0,  // เก็บจำนวนไฟล์จาก API
-    sources: [] as any[],  // เก็บรายการไฟล์
+    sources: [] as any[],
+    totalFilesFromList: 0
 })
 
 const deleteModalState = reactive({
@@ -44,74 +37,80 @@ const deleteModalState = reactive({
 })
 
 /* ============================================
-   DATA LOADING FUNCTIONS
+   Data Loading
 ============================================ */
-async function loadChannelFiles() {
-    loading.value = true
-    error.value = ''
+const loadChannelData = async () => {
+    if (!channelId.value) return
 
     try {
-        // ✅ เรียก fetchPublicChannels พร้อมกรองเฉพาะช่องที่ต้องการ
-        const response = await fetchPublicChannels({
-            limit: 100  // ดึงมาเยอะๆ เผื่อหาช่องที่เราต้องการ
-        })
+        let response
 
-        // ✅ หาช่องที่ตรงกับ channelId
-        const currentChannel = response.find((ch: any) =>
-            ch.channels_id === channelId.value ||
-            ch.channel_id === channelId.value  // ลองทั้ง 2 field เผื่อ API ใช้ชื่อต่างกัน
-        )
-
-        if (currentChannel) {
-            // ✅ เซ็ตข้อมูลจาก response
-            state.channelTitle = currentChannel.title
-            state.fileCount = currentChannel.file_count || 0
-            state.sources = currentChannel.files || []
-
-            console.log('✅ โหลดข้อมูลช่องสำเร็จ:', {
-                title: state.channelTitle,
-                fileCount: state.fileCount,
-                filesLoaded: state.sources.length
-            })
-        } else {
-            throw new Error('ไม่พบช่องที่ต้องการ')
+        // ตรวจสอบสิทธิ์ (Admin > Owner > Public)
+        if (authStore.role === 'admin') {
+            response = await fetchAllChannels({ limit: 100 })
+        } else if (authStore.token) {
+            response = await fetchMyChannels({ limit: 100 })
         }
 
-    } catch (err) {
-        console.error('❌ Error loading channel:', err)
-        error.value = 'ไม่สามารถโหลดข้อมูลช่องได้'
+        // ฟังก์ชันหาช่องที่ ID ตรงกัน
+        const findChannel = (list: any[]) =>
+            list?.find((c: any) => String(c.channels_id) === String(channelId.value))
 
+        let currentChannel = response ? findChannel(response as any[]) : null
+
+        // ถ้าไม่เจอให้ดึงจาก Public
+        if (!currentChannel) {
+            const publicRes = await fetchPublicChannels({ limit: 100 })
+            currentChannel = findChannel(publicRes as any[])
+        }
+
+        // อัปเดตข้อมูล
+        if (currentChannel) {
+            state.channelTitle = currentChannel.title || 'ไม่พบชื่อช่อง'
+            state.totalFilesFromList = currentChannel.file_count || 0
+            state.sources = currentChannel.files || []
+        } else {
+            toast.add({
+                title: 'ไม่พบข้อมูลช่อง',
+                description: 'คุณไม่มีสิทธิ์เข้าถึงช่องนี้',
+                color: 'warning'
+            })
+            router.push('/')
+        }
+    } catch (err: any) {
+        console.error('❌ Error loading channel:', err)
         toast.add({
             title: 'เกิดข้อผิดพลาด',
-            description: 'ไม่สามารถโหลดรายการไฟล์ได้',
+            description: 'ไม่สามารถโหลดข้อมูลช่องได้',
             color: 'error'
         })
-    } finally {
-        loading.value = false
     }
 }
 
 /* ============================================
-   FILE UPLOAD HANDLERS
+   File Upload Handler
 ============================================ */
-async function handleFileUpload(event: any) {
+const handleFileUpload = async (event: any) => {
     const files = event.target?.files || event.dataTransfer?.files || event
+
     if (!files || files.length === 0) return
 
     const fileArray = Array.from(files) as File[]
+    const MAX_FILES = 50
+    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
-    // Validate file count (max 50 files)
-    if (state.sources.length + fileArray.length > 50) {
+    // ตรวจสอบจำนวนไฟล์
+    if (state.sources.length + fileArray.length > MAX_FILES) {
         toast.add({
             title: 'เกิดข้อผิดพลาด',
-            description: 'ไม่สามารถอัปโหลดได้เกิน 50 ไฟล์',
+            description: `ไม่สามารถอัปโหลดได้เกิน ${MAX_FILES} ไฟล์`,
             color: 'error'
         })
         return
     }
 
-    // Validate file size (max 50MB per file)
-    const invalidFiles = fileArray.filter(f => f.size > 50 * 1024 * 1024)
+    // ตรวจสอบขนาดไฟล์
+    const invalidFiles = fileArray.filter(f => f.size > MAX_FILE_SIZE)
     if (invalidFiles.length > 0) {
         toast.add({
             title: 'ไฟล์ใหญ่เกินไป',
@@ -121,19 +120,19 @@ async function handleFileUpload(event: any) {
         return
     }
 
-    // Upload files
     try {
         state.isUploading = true
         const result = await uploadFiles(channelId.value, fileArray)
 
         state.sources.push(...result.files)
-        state.isModalOpen = false
 
         toast.add({
             title: 'สำเร็จ',
             description: `อัปโหลดไฟล์ ${fileArray.length} ไฟล์เรียบร้อย`,
             color: 'success'
         })
+
+        state.isModalOpen = false
     } catch (err) {
         console.error('Upload failed:', err)
         toast.add({
@@ -146,29 +145,39 @@ async function handleFileUpload(event: any) {
     }
 }
 
-function openDeleteModal(file: any) {
+/* ============================================
+   File Management Handlers
+============================================ */
+const handleDownload = async (file: any) => {
+    try {
+        await downLoadFile(file.files_id, file.original_filename)
+    } catch (err) {
+        toast.add({
+            title: 'ดาวน์โหลดไม่สำเร็จ',
+            description: 'เกิดข้อผิดพลาดในการโหลดไฟล์',
+            color: 'error'
+        })
+    }
+}
+
+const openDeleteModal = (file: any) => {
     deleteModalState.selectedFile = file
     deleteModalState.isOpen = true
 }
 
-function handleFileDeleted(fileId: string) {
+const handleFileDeleted = (fileId: string) => {
     state.sources = state.sources.filter(f => f.files_id !== fileId)
 }
 
-
 /* ============================================
-   LIFECYCLE HOOKS
+   Lifecycle Hooks
 ============================================ */
-onMounted(async () => {
-    await Promise.all([
-        loadChannelFiles()
-    ])
+onMounted(() => {
+    loadChannelData()
 })
 
 watch(() => route.params.id, (newId) => {
-    if (newId) {
-        loadChannelFiles()
-    }
+    if (newId) loadChannelData()
 })
 </script>
 
@@ -176,16 +185,21 @@ watch(() => route.params.id, (newId) => {
     <aside
         class="w-80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col hidden md:flex shadow-xl">
 
-        <!-- Sidebar Header -->
+        <!-- Header with Gradient -->
         <div
             class="p-6 border-b border-gray-100 dark:border-gray-800/50 bg-gradient-to-br from-primary-50/50 to-transparent dark:from-primary-950/20">
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
-                <h2 class="font-bold text-gray-800 dark:text-gray-100 text-lg">แหล่งข้อมูล</h2>
+                <h2 class="font-bold text-gray-800 dark:text-gray-100 text-lg">
+                    แหล่งข้อมูล
+                </h2>
             </div>
 
-            <!-- Add Source Button -->
-            <UModal v-model="state.isModalOpen" :ui="{ content: 'sm:max-w-[900px]', overlay: 'backdrop-blur-sm' }">
+            <!-- Upload Modal Button -->
+            <UModal v-model="state.isModalOpen" :ui="{
+                content: 'sm:max-w-[900px]',
+                overlay: 'backdrop-blur-sm'
+            }">
                 <UButton block icon="i-heroicons-plus" color="primary" size="lg"
                     :disabled="loading || state.isUploading"
                     class="cursor-pointer font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
@@ -195,7 +209,6 @@ watch(() => route.params.id, (newId) => {
                     </span>
                 </UButton>
 
-                <!-- Upload Modal -->
                 <template #header>
                     <div class="flex items-center gap-3">
                         <div
@@ -204,8 +217,9 @@ watch(() => route.params.id, (newId) => {
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-gray-900 dark:text-white">เพิ่มแหล่งที่มา</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">อัปโหลดเอกสารเพื่อให้ AI
-                                วิเคราะห์ข้อมูล</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                อัปโหลดเอกสารเพื่อให้ AI วิเคราะห์ข้อมูล
+                            </p>
                         </div>
                     </div>
                 </template>
@@ -225,10 +239,13 @@ watch(() => route.params.id, (newId) => {
                                         <UIcon name="i-heroicons-cloud-arrow-up" class="w-8 h-8" />
                                     </div>
                                     <h4 class="text-xl font-bold text-gray-800 dark:text-gray-100">
-                                        อัปโหลดแหล่งข้อมูล</h4>
+                                        อัปโหลดแหล่งข้อมูล
+                                    </h4>
                                     <p class="text-gray-600 dark:text-gray-300 text-base">
-                                        ลากและวาง หรือ <span
-                                            class="text-primary-600 dark:text-primary-400 font-semibold">คลิกเพื่อเลือกไฟล์</span>
+                                        ลากและวาง หรือ
+                                        <span class="text-primary-600 dark:text-primary-400 font-semibold">
+                                            คลิกเพื่อเลือกไฟล์
+                                        </span>
                                     </p>
                                     <div class="flex items-center gap-4 text-sm text-gray-500">
                                         <div class="flex items-center gap-1.5">
@@ -253,7 +270,8 @@ watch(() => route.params.id, (newId) => {
                                             class="w-16 h-16 border-4 border-primary-600 rounded-full border-t-transparent animate-spin absolute inset-0">
                                         </div>
                                     </div>
-                                    <p class="text-gray-700 dark:text-gray-200 font-medium text-lg">กำลังอัปโหลด...
+                                    <p class="text-gray-700 dark:text-gray-200 font-medium text-lg">
+                                        กำลังอัปโหลด...
                                     </p>
                                 </div>
 
@@ -265,9 +283,11 @@ watch(() => route.params.id, (newId) => {
                         </div>
 
                         <!-- Error Display -->
-                        <UAlert v-if="error" color="error" variant="soft" :title="error"
-                            :close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'error', variant: 'link' }"
-                            @close="clearError" />
+                        <UAlert v-if="error" color="error" variant="soft" :title="error" :close-button="{
+                            icon: 'i-heroicons-x-mark-20-solid',
+                            color: 'error',
+                            variant: 'link'
+                        }" @close="clearError" />
                     </div>
 
                     <!-- Progress Footer -->
@@ -277,12 +297,14 @@ watch(() => route.params.id, (newId) => {
                             <UIcon name="i-heroicons-folder" class="w-5 h-5 text-gray-500 flex-shrink-0" />
                             <div class="flex-1">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span
-                                        class="text-sm font-semibold text-gray-700 dark:text-gray-200">ขีดจำกัดแหล่งที่มา</span>
-                                    <span class="text-sm font-bold text-primary-600 dark:text-primary-400">{{
-                                        displayFileCount }}/50</span>
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                        ขีดจำกัดแหล่งที่มา
+                                    </span>
+                                    <span class="text-sm font-bold text-primary-600 dark:text-primary-400">
+                                        {{ fileCount }}/50
+                                    </span>
                                 </div>
-                                <UProgress :model-value="displayFileCount" :max="50" size="md" />
+                                <UProgress :model-value="fileCount" :max="50" size="md" />
                             </div>
                         </div>
                     </div>
@@ -315,9 +337,8 @@ watch(() => route.params.id, (newId) => {
 
             <!-- File Items -->
             <div v-for="(file, index) in state.sources" :key="file.files_id"
-                class="flex items-center justify-between p-3 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-950/30 cursor-pointer group transition-all duration-300 hover:shadow-md hover:scale-[1.02] border border-transparent hover:border-primary-200 dark:hover:border-primary-900"
+                class="flex items-center justify-between p-3 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent dark:hover:from-primary-950/30 group transition-all duration-300 hover:shadow-md hover:scale-[1.02] border border-transparent hover:border-primary-200 dark:hover:border-primary-900"
                 :style="{ animationDelay: `${index * 50}ms` }">
-
                 <div class="flex items-center gap-3 truncate flex-1 min-w-0">
                     <div
                         class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -335,30 +356,59 @@ watch(() => route.params.id, (newId) => {
                     </div>
                 </div>
 
+                <!-- Download Button -->
+                <UButton icon="i-heroicons-arrow-down-tray" color="primary" variant="ghost" size="sm"
+                    @click.stop="handleDownload(file)"
+                    class="opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110" />
+
+                <!-- Delete Button -->
                 <UButton icon="i-heroicons-trash" color="error" variant="ghost" size="sm"
                     @click.stop="openDeleteModal(file)"
                     class="opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110" />
             </div>
         </div>
 
-        <!-- Sidebar Footer -->
+        <!-- Footer Progress -->
         <div
             class="p-4 bg-gradient-to-t from-gray-100/50 to-transparent dark:from-gray-900/50 border-t border-gray-200/50 dark:border-gray-800/50 backdrop-blur-sm">
             <div class="flex items-center gap-3">
                 <UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-gray-500 flex-shrink-0" />
                 <div class="flex-1">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300">ใช้งานแล้ว</span>
-                        <span class="text-sm font-bold text-primary-600 dark:text-primary-400">{{ displayFileCount
-                        }}/50</span>
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                            ใช้งานแล้ว
+                        </span>
+                        <span class="text-sm font-bold text-primary-600 dark:text-primary-400">
+                            {{ fileCount }}/50
+                        </span>
                     </div>
-                    <UProgress :model-value="displayFileCount" :max="50" size="md" />
+                    <UProgress :model-value="fileCount" :max="50" size="md" />
                 </div>
             </div>
         </div>
-    </aside>
 
-    <!-- Delete Modal Component -->
-    <ModalDeleteFile v-model:open="deleteModalState.isOpen" :file="deleteModalState.selectedFile"
-        @deleted="handleFileDeleted" />
+        <!-- Delete Modal Component -->
+        <ModalDeleteFile v-model:open="deleteModalState.isOpen" :file="deleteModalState.selectedFile"
+            @deleted="handleFileDeleted" />
+    </aside>
 </template>
+
+<style scoped>
+.overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, rgba(156, 163, 175, 0.3), rgba(156, 163, 175, 0.5));
+    border-radius: 99px;
+    transition: background 0.3s;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, rgba(156, 163, 175, 0.5), rgba(156, 163, 175, 0.7));
+}
+</style>
