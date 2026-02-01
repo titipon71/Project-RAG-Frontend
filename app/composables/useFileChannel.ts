@@ -29,18 +29,61 @@ export const useFileChannel = () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  // --- Helper Function สำหรับยิง API (เลียนแบบ useChannel) ---
-  const request = async <T = any>(endpoint: string, options: any = {}) => {
+  // ฟังก์ชันสำหรับดึง Header (เพื่อลดความซ้ำซ้อนในการเขียน Authorization)
+  const getHeaders = () => ({
+    Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
+  });
+
+  // --- File Operations ---
+
+  /**
+   * ดึงรายการไฟล์ในแชนแนล
+   * GET /files/list/{channel_id}
+   */
+  const listFiles = async (channelId: string) => {
+    if (!channelId) throw new Error("กรุณาระบุ Channel ID");
+
     loading.value = true;
-    error.value = null; // เพิ่มการเคลียร์ error ก่อนเริ่ม request
+    error.value = null;
     try {
-      await $fetch<T>(endpoint, {
-        baseURL: apiBase,
-        ...options,
-        headers: {
-          Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
-          ...options.headers,
+      return await $fetch<ListFilesResponse>(
+        `${apiBase}/files/list/${channelId}`,
+        {
+          method: "GET",
+          headers: getHeaders(),
         },
+      );
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "เกิดข้อผิดพลาด";
+      error.value = errorMessage;
+      console.error("API Error:", errorMessage, err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * อัปโหลดไฟล์แบบ Multipart
+   * POST /files/upload
+   */
+  const uploadFiles = async (channelId: string, files: File[]) => {
+    if (!files || files.length === 0) {
+      throw new Error("กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์");
+    }
+
+    const formData = new FormData();
+    formData.append("channel_id", channelId);
+    files.forEach((file) => formData.append("files", file));
+
+    loading.value = true;
+    error.value = null;
+    try {
+      return await $fetch<UploadResponse>(`${apiBase}/files/upload`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: formData,
       });
     } catch (err: any) {
       const errorMessage =
@@ -53,62 +96,47 @@ export const useFileChannel = () => {
     }
   };
 
-  // --- File Operations ---
-
-  /**
-   * ดึงรายการไฟล์ในแชนแนล
-   * GET /files/list/{channel_id}
-   */
-  const listFiles = (channelId: string) => {
-    if (!channelId) throw new Error("กรุณาระบุ Channel ID");
-
-    return request<ListFilesResponse>(`/files/list/${channelId}`, {
-      method: "GET",
-    });
-  };
-
-  /**
-   * อัปโหลดไฟล์แบบ Multipart
-   * POST /files/upload
-   */
-  const uploadFiles = (channelId: string, files: File[]) => {
-    if (!files || files.length === 0) {
-      throw new Error("กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์");
-    }
-
-    const formData = new FormData();
-    formData.append("channel_id", channelId);
-    files.forEach((file) => formData.append("files", file));
-
-    return request<UploadResponse>("/files/upload", {
-      method: "POST",
-      body: formData,
-    });
-  };
-
   /**
    * ลบไฟล์ตามไอดี
    * DELETE /files/delete/{id}
    */
-  const deleteFile = (fileId: string | number) => {
+  const deleteFile = async (fileId: string | number) => {
     if (!fileId) throw new Error("กรุณาระบุ File ID");
 
-    return request<DeleteResponse>(`/files/delete/${fileId}`, {
-      method: "DELETE",
-    });
+    loading.value = true;
+    error.value = null;
+    try {
+      await $fetch<DeleteResponse>(`${apiBase}/files/delete/${fileId}`, {
+        method: "DELETE",
+        headers: getHeaders(),
+      });
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "เกิดข้อผิดพลาด";
+      error.value = errorMessage;
+      console.error("API Error:", errorMessage, err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
   };
 
-  // เพิ่มใน useFileChannel ในไฟล์เดิม
+  /**
+   * ดาวน์โหลดไฟล์
+   * GET /files/download/{fileHash}
+   */
   const downLoadFile = async (fileHash: string, fileName: string) => {
+    loading.value = true;
+    error.value = null;
     try {
-      const response = await $fetch<Blob>(`/files/download/${fileHash}`, {
-        baseURL: apiBase,
-        method: "GET",
-        headers: {
-          Authorization: authStore.token ? `Bearer ${authStore.token}` : "",
+      const response = await $fetch<Blob>(
+        `${apiBase}/files/download/${fileHash}`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+          responseType: "blob", // สำคัญมาก: เพื่อให้ได้ข้อมูลเป็นไฟล์
         },
-        responseType: "blob", // สำคัญมาก: เพื่อให้ได้ข้อมูลเป็นไฟล์
-      });
+      );
 
       // สร้าง Link เพื่อดาวน์โหลดไฟล์
       const url = window.URL.createObjectURL(response);
@@ -126,6 +154,8 @@ export const useFileChannel = () => {
       error.value = errorMessage;
       console.error("Download Error:", err);
       throw err;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -142,7 +172,7 @@ export const useFileChannel = () => {
     listFiles,
     uploadFiles,
     deleteFile,
-    clearError,
     downLoadFile,
+    clearError,
   };
 };

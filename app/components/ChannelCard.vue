@@ -11,8 +11,10 @@ const {
     ownerSetPrivateChannel,
     adminforceSetPrivateChannel,
     adminforceSetPublicChannel,
+    createChannel,
+    updateChannel,
     deleteChannel,
-    loading // ใช้ loading ตัวรวมที่ประกาศไว้ใน useChannel ตัวใหม่
+    loading
 } = useChannel()
 
 
@@ -62,6 +64,17 @@ const channelToDelete = computed(() => {
         name: props.item.title
     }
 })
+
+// handlers สำหรับ ModalChannelForm (เหมือน pattern ModalDelete)
+const handleCreate = async (data: { title: string; description: string }) => {
+    const id = await createChannel(data)
+    navigateTo(`/channels/${id}`)
+}
+
+const handleEdit = async (id: number, data: { title: string; description: string }) => {
+    await updateChannel(id, data)
+    emit('load')
+}
 
 const openModal = (type: keyof typeof modals.value) => {
     modals.value[type] = true
@@ -375,11 +388,11 @@ const testimonial = computed(() => ({
         description="การลบจะไม่สามารถย้อนกลับมาได้ และเอกสารทุกไฟล์ภายในแชนแนลนี้จะถูกลบออกถาวร"
         @deleted="emit('load')" />
 
-    <ModalEdit v-model:open="modals.edit" :item="{
+    <ModalChannelForm v-model:open="modals.edit" mode="edit" :item="{
         channels_id: props.item.channels_id,
         title: props.item.title,
         description: props.item.description
-    }" @edit="emit('load')" />
+    }" :loading="loading" :create-handler="handleCreate" :edit-handler="handleEdit" @edit="emit('load')" />
 
     <ModalDetail v-model:open="modals.detail" :item="props.item" @edit="emit('load')" />
 
