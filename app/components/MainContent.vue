@@ -34,6 +34,7 @@ const state = reactive({
    Refs
 ============================================ */
 const chatContainer = ref<HTMLElement | null>(null)
+const showApiKeyModal = ref(false)
 
 /* ============================================
    Chat Logic
@@ -118,7 +119,15 @@ watch(() => route.params.id, () => {
                         {{ channelTitle }}
                     </h1>
                 </div>
-                <UserMenu />
+
+                <div class="flex items-center gap-3">
+                    <!-- ปุ่มเปิด API Keys Modal -->
+                    <ApiKeyModal v-model="showApiKeyModal" :item="{
+                        title: channelTitle,
+                        channels_id: channelId
+                    }" />
+                    <UserMenu />
+                </div>
             </nav>
         </div>
 
