@@ -4,7 +4,7 @@
 ============================================ */
 const route = useRoute()
 
-const { createSession, getChatHistory, sendOllamaReply, loading: chatLoading } = useChat()
+const { createSession, sendOllamaReply, loading: chatLoading } = useChat()
 
 /* ============================================
    Props
@@ -42,15 +42,6 @@ const initChatSession = async () => {
     try {
         const session = await createSession(channelId.value)
         state.sessionId = session.sessions_id
-
-        // Optional: Load chat history
-        // const history = await getChatHistory(state.sessionId)
-        // state.chatHistory = history.map(h => ({
-        //     id: h.chat_id,
-        //     role: h.sender_type,
-        //     text: h.message,
-        //     citations: []
-        // }))
     } catch (err) {
         console.error('Init session failed:', err)
     }

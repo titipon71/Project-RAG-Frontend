@@ -1,11 +1,12 @@
 export const useChat = () => {
   const config = useRuntimeConfig();
+  const apiBase = config.public.apiBase;
   const authStore = useAuthStore();
   const error = ref<string | null>(null);
   const loading = ref(false);
 
   // Base URL สำหรับ Chat API
-  const chatBase = "https://fastapi888.lukeenortaed.site";
+  const chatBase = apiBase;
 
   // Helper function สำหรับ headers
   const getAuthHeaders = () => {
@@ -61,36 +62,6 @@ export const useChat = () => {
     }
   };
 
-  // 2. ดึงประวัติการแชท
-  const getChatHistory = async (sessionId: string) => {
-    loading.value = true;
-    error.value = null;
-
-    try {
-      const data = await $fetch<any>(
-        `${chatBase}/sessions/${sessionId}/history`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      // รองรับทั้ง Array โดยตรง หรือ Object ที่มี data
-      const history = Array.isArray(data) ? data : data?.data || [];
-
-      return history;
-    } catch (err: any) {
-      const errorMsg =
-        err?.data?.detail || err?.message || "ไม่สามารถโหลดประวัติแชทได้";
-      error.value = errorMsg;
-      console.error("Get chat history error:", err);
-      throw new Error(errorMsg);
-    } finally {
-      loading.value = false;
-    }
-  };
-
   // 3. ส่งข้อความแชทกับ Ollama - ใช้ POST /sessions/ollama-reply
   const sendOllamaReply = async (sessionId: string, message: string) => {
     error.value = null;
@@ -105,8 +76,6 @@ export const useChat = () => {
         },
         credentials: "include",
       });
-
-      console.log("Ollama reply response:", data);
 
       // ดึงข้อความตอบกลับจาก AI (รองรับหลายรูปแบบ)
       let replyText = "";
@@ -140,7 +109,6 @@ export const useChat = () => {
     loading,
     error,
     createSession,
-    getChatHistory,
     sendOllamaReply,
   };
 };
